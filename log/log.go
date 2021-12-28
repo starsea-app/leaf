@@ -25,13 +25,21 @@ const (
 	printFatalLevel   = "[fatal  ] "
 )
 
-type Logger struct {
+type Logger interface {
+	Debug(format string, a ...interface{})
+	Release(format string, a ...interface{})
+	Error(format string, a ...interface{})
+	Fatal(format string, a ...interface{})
+	Close()
+}
+
+type logger struct {
 	level      int
 	baseLogger *log.Logger
 	baseFile   *os.File
 }
 
-func New(strLevel string, pathname string, flag int) (*Logger, error) {
+func New(strLevel string, pathname string, flag int) (Logger, error) {
 	// level
 	var level int
 	switch strings.ToLower(strLevel) {
@@ -73,7 +81,7 @@ func New(strLevel string, pathname string, flag int) (*Logger, error) {
 	}
 
 	// new
-	logger := new(Logger)
+	logger := new(logger)
 	logger.level = level
 	logger.baseLogger = baseLogger
 	logger.baseFile = baseFile
@@ -82,7 +90,7 @@ func New(strLevel string, pathname string, flag int) (*Logger, error) {
 }
 
 // It's dangerous to call the method on logging
-func (logger *Logger) Close() {
+func (logger *logger) Close() {
 	if logger.baseFile != nil {
 		logger.baseFile.Close()
 	}
@@ -91,7 +99,7 @@ func (logger *Logger) Close() {
 	logger.baseFile = nil
 }
 
-func (logger *Logger) doPrintf(level int, printLevel string, format string, a ...interface{}) {
+func (logger *logger) doPrintf(level int, printLevel string, format string, a ...interface{}) {
 	if level < logger.level {
 		return
 	}
@@ -107,45 +115,45 @@ func (logger *Logger) doPrintf(level int, printLevel string, format string, a ..
 	}
 }
 
-func (logger *Logger) Debug(format string, a ...interface{}) {
+func (logger *logger) Debug(format string, a ...interface{}) {
 	logger.doPrintf(debugLevel, printDebugLevel, format, a...)
 }
 
-func (logger *Logger) Release(format string, a ...interface{}) {
+func (logger *logger) Release(format string, a ...interface{}) {
 	logger.doPrintf(releaseLevel, printReleaseLevel, format, a...)
 }
 
-func (logger *Logger) Error(format string, a ...interface{}) {
+func (logger *logger) Error(format string, a ...interface{}) {
 	logger.doPrintf(errorLevel, printErrorLevel, format, a...)
 }
 
-func (logger *Logger) Fatal(format string, a ...interface{}) {
+func (logger *logger) Fatal(format string, a ...interface{}) {
 	logger.doPrintf(fatalLevel, printFatalLevel, format, a...)
 }
 
 var gLogger, _ = New("debug", "", log.LstdFlags)
 
 // It's dangerous to call the method on logging
-func Export(logger *Logger) {
+func Export(logger Logger) {
 	if logger != nil {
 		gLogger = logger
 	}
 }
 
 func Debug(format string, a ...interface{}) {
-	gLogger.doPrintf(debugLevel, printDebugLevel, format, a...)
+	gLogger.Debug(format, a...)
 }
 
 func Release(format string, a ...interface{}) {
-	gLogger.doPrintf(releaseLevel, printReleaseLevel, format, a...)
+	gLogger.Release(format, a...)
 }
 
 func Error(format string, a ...interface{}) {
-	gLogger.doPrintf(errorLevel, printErrorLevel, format, a...)
+	gLogger.Error(format, a...)
 }
 
 func Fatal(format string, a ...interface{}) {
-	gLogger.doPrintf(fatalLevel, printFatalLevel, format, a...)
+	gLogger.Fatal(format, a...)
 }
 
 func Close() {
